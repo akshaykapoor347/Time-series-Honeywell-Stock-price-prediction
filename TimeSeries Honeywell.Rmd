@@ -1,0 +1,121 @@
+---
+title: "Timeseries Honeywell"
+author: "Akshay"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##We first load the libraries and the data file
+
+```{r}
+library(forecast)
+library(ggplot2)
+
+ts_honey <-  read.csv("Honeywell.csv")
+ts_honey <- ts_honey[c(-1,-3)]
+
+ts_honey <- ts(ts_honey)
+plot.ts(ts_honey)
+
+```
+
+#Perform analysis on time seris data using Exponential smoothing and varying alpha to see which has the least SSE
+
+```{r}
+mod1 <- HoltWinters(ts_honey, alpha=0.15, beta=FALSE, gamma=FALSE)
+mod2 <- HoltWinters(ts_honey, alpha=0.35, beta=FALSE, gamma=FALSE)
+
+mod3 <- HoltWinters(ts_honey, alpha=0.55, beta=FALSE, gamma=FALSE)
+mod4 <- HoltWinters(ts_honey, alpha=0.75, beta=FALSE, gamma=FALSE)
+modauto <- HoltWinters(ts_honey,  beta=FALSE, gamma=FALSE)
+
+
+mod1$SSE
+mod2$SSE
+mod3$SSE
+mod4$SSE
+modauto$SSE
+
+modforecast <- forecast(modauto, h = 4)
+modforecast
+plot(modforecast)
+
+```
+
+##Changing the beta parameter on HoltzWinters
+```{r}
+ts_honey <-  read.csv("Honeywell.csv")
+
+ts_honey <- ts_honey[c(-1,-3)]
+
+
+mod1 <- HoltWinters(ts_honey, alpha=0.75, beta=0.15, gamma=FALSE)
+mod2 <- HoltWinters(ts_honey, alpha=0.75, beta=0.25, gamma=FALSE)
+
+mod3 <- HoltWinters(ts_honey, alpha=0.75, beta=0.45, gamma=FALSE)
+mod4 <- HoltWinters(ts_honey, alpha=0.75, beta=0.85, gamma=FALSE)
+modauto <- HoltWinters(ts_honey,   gamma=FALSE)
+
+
+mod1$SSE
+mod2$SSE
+mod3$SSE
+mod4$SSE
+modauto$SSE
+
+modforecast <- forecast(modauto, h = 4)
+
+plot(modforecast)
+```
+
+Performing the prediction using linear regression and comparing it with time series forecast.
+```{r}
+ts_honey <-  read.csv("Honeywell.csv")
+ts_honey <- ts_honey[c(-1,-3)]
+num <- seq(1:124)
+ts_honey[,2] <- num
+temp <- ts_honey[,1] 
+ts_honey[,1] <- ts_honey[,2]
+ts_honey[,2] <- temp
+
+
+df <- lm(ts_honey$V2 ~ ts_honey$Close)
+
+plot(df)
+
+ggplot(ts_honey,aes(x=V2,y=Close)) + geom_point(aes(color = Close)) + scale_colour_gradient(high='red',low = "blue") + geom_smooth(method='lm',formula=y~x)
+
+
+summary(df)
+new <- data.frame(x = seq(124, 247, 1))
+
+prediction <- predict(df, newdata = new,se.fit = TRUE)
+
+mean((ts_honey[,2] - prediction$fit)^2)
+
+sse <- sum(df$residuals^2)
+
+sse
+
+summary(df)
+
+X <- resid(df)
+
+hist(X)
+View(X)
+
+#Plotting probability plot
+qqnorm(X) 
+qqline(X)
+
+ts_honey <-  read.csv("Honeywell.csv")
+
+plot(ts_honey$Date,X, type = "p")
+
+plot(X,prediction$fit, type = "p")
+abline(df)
+```
+
+##We can see from the above plot how badly the linear refression has performed for prediction compared to forecast using Exponential smoothing.
